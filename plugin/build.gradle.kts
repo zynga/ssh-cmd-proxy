@@ -6,11 +6,11 @@
  */
 
 plugins {
-    // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
-    `java-gradle-plugin`
-    `maven-publish`
     id("com.diffplug.spotless") version "6.25.0"
+    id("com.gradle.plugin-publish") version "1.2.1"
+    signing
 }
+
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -29,7 +29,8 @@ dependencies {
     implementation("net.i2p.crypto:eddsa:0.3.0")
 }
 
-version = "0.1"
+group = "com.zynga"
+version = "1.0"
 
 // Apply a specific Java toolchain to ease working on different environments.
 java {
@@ -54,12 +55,23 @@ publishing {
 }
 
 gradlePlugin {
+    website = "https://github.com/zynga/ssh-cmd-proxy"
+    vcsUrl = "https://github.com/zynga/ssh-cmd-proxy.git"
     plugins {
         create("SSHCmdProxy") {
             id = "com.zynga.aquinney.ssh-cmd-proxy"
             implementationClass = "com.zynga.aquinney.sshcmdproxy.SSHCmdProxy"
+            displayName = "SSH Command Proxy"
+            description =
+                "A Gradle plugin that fixes some technical deficiencies and expands the capabilities of source dependencies."
+            tags = listOf("git", "source", "dependencies", "dependency", "ssh", "auth", "authentication", "github")
         }
     }
+}
+
+signing {
+    useGpgCmd()
+    sign(configurations.runtimeElements.get())
 }
 
 spotless {
