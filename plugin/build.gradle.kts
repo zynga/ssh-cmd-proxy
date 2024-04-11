@@ -9,6 +9,7 @@ plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     `java-gradle-plugin`
     `maven-publish`
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 repositories {
@@ -61,9 +62,14 @@ gradlePlugin {
     }
 }
 
-// Add a source set for the functional test suite
-val functionalTestSourceSet = sourceSets.create("functionalTest") {
+spotless {
+    java {
+        googleJavaFormat()
+    }
 }
+
+// Add a source set for the functional test suite
+val functionalTestSourceSet = sourceSets.create("functionalTest") {}
 
 configurations["functionalTestImplementation"].extendsFrom(configurations["testImplementation"])
 configurations["functionalTestRuntimeOnly"].extendsFrom(configurations["testRuntimeOnly"])

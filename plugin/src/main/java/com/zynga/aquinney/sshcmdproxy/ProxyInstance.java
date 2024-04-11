@@ -24,6 +24,7 @@ import org.apache.sshd.common.FactoryManager;
 import org.apache.sshd.common.NamedResource;
 import org.apache.sshd.common.SshConstants;
 import org.apache.sshd.common.config.keys.FilePasswordProvider;
+import org.apache.sshd.common.config.keys.KeyUtils;
 import org.apache.sshd.common.config.keys.PublicKeyEntry;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionContext;
@@ -59,7 +60,7 @@ class ProxyInstance implements Closeable {
     final SimpleGeneratorHostKeyProvider idProvider =
         new SimpleGeneratorHostKeyProvider() {
           {
-            setAlgorithm("RSA");
+            setAlgorithm(KeyUtils.RSA_ALGORITHM);
           }
         };
     try {
