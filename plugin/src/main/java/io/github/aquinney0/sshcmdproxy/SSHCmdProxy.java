@@ -13,6 +13,7 @@ import javax.inject.Inject;
 import org.gradle.api.*;
 import org.gradle.api.flow.FlowAction;
 import org.gradle.api.flow.FlowParameters;
+import org.gradle.api.flow.FlowProviders;
 import org.gradle.api.flow.FlowScope;
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.provider.Property;
@@ -21,22 +22,38 @@ import org.gradle.api.tasks.Input;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SSHCmdProxy implements Plugin<Settings>, Closeable, ProxyInstance.ConfigurationSource {
+public abstract class SSHCmdProxy
+    implements Plugin<Settings>, Closeable, ProxyInstance.ConfigurationSource {
   private static final Logger logger = LoggerFactory.getLogger(SSHCmdProxy.class);
-  private final FlowScope flowScope;
-  private final ProviderFactory providerFactory;
   private final Map<URI, ProxyInstance> proxyInstances = new ConcurrentHashMap<>();
 
   @Inject
-  public SSHCmdProxy(final FlowScope flowScope, final ProviderFactory providerFactory) {
-    this.flowScope = flowScope;
-    this.providerFactory = providerFactory;
-  }
+  protected abstract FlowScope getFlowScope();
+
+  @Inject
+  protected abstract FlowProviders getFlowProviders();
+
+  @Inject
+  protected abstract ProviderFactory getProviderFactory();
 
   @Override
   public void apply(final Settings settings) {
-    flowScope.always(
-        ProxyClose.class, parameters -> parameters.getParameters().getTarget().set(this));
+    getFlowScope()
+        .always(
+            ProxyClose.class,
+            spec ->
+                spec.getParameters()
+                    .getTarget()
+                    .set(
+                        getFlowProviders()
+                            .getBuildWorkResult()
+                            .map(
+                                result -> {
+                                  logger.info(
+                                      "Build completion (success: {}), queuing close action.",
+                                      result.getFailure().isEmpty());
+                                  return SSHCmdProxy.this;
+                                })));
   }
 
   private URI getProxy(final Supplier<String> identifier, final String uri) {
@@ -127,7 +144,7 @@ public class SSHCmdProxy implements Plugin<Settings>, Closeable, ProxyInstance.C
   @Override
   public Optional<String> getProperty(final String propertyName) {
     final Optional<String> result =
-        Optional.ofNullable(providerFactory.gradleProperty(propertyName).getOrNull());
+        Optional.ofNullable(getProviderFactory().gradleProperty(propertyName).getOrNull());
     result.ifPresentOrElse(
         value -> logger.info("Read property '{}'.", propertyName),
         () -> logger.info("No value for property '{}'", propertyName));
@@ -138,7 +155,7 @@ public class SSHCmdProxy implements Plugin<Settings>, Closeable, ProxyInstance.C
   public Collection<String> getProperties(String propertyNamePrefix) {
     final Map<String, String> properties =
         Optional.ofNullable(
-                providerFactory.gradlePropertiesPrefixedBy(propertyNamePrefix).getOrNull())
+                getProviderFactory().gradlePropertiesPrefixedBy(propertyNamePrefix).getOrNull())
             .orElse(Collections.emptyMap());
     logger.info(
         "Read keys for property prefix '{}': {}",
