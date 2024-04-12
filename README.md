@@ -12,9 +12,9 @@ The problem with this feature is that Gradle uses an outdated set of Git librari
     * No support for modern private key formats (eg. EdDSA).
     * No support for password authentication.
     * No support for encrypted private keys.
-* SHA1 for all key hashing. On top of being insecure, SHA1 hashes are explicitly [forbidden](https://github.blog/2021-09-01-improving-git-protocol-security-github/#dropping-insecure-algorithms) by GitHub. ***This means that Gradle source dependencies will not work with GitHub under any circumstances!***
+* SHA1 for all key hashing. On top of being insecure, SHA1 hashes are explicitly [forbidden](https://github.blog/2021-09-01-improving-git-protocol-security-github/#dropping-insecure-algorithms) by GitHub. ***This means that SSH Gradle source dependencies will not work with GitHub under any circumstances!*** As an alternative, HTTPS access can still work but without any support from Gradle for different authentication mechanisms, this is limited only to repositories that allow fully anonymous access.
 
-This plugin fixes these issues by automatically spinning up local, ephemeral SSH proxy servers when a source dependency is identified in a build to act as a ‘man in the middle’ when Gradle attempts to retrieve the dependency. With this setup, the proxy can connect to the source repository using a [modern SSH implementation](https://mina.apache.org/sshd-project/), and provide a backward compatible SSH server to Gradle at the same time. In addition to modernizing the SSH implementation, the proxy server can inject additional authentication mechanisms, such as support for passwords, modern private key formats, key encryption, and SSH agent support, all of which Gradle source dependencies lack. This is important as it ensures that all possible users are not simply locked out of one of the most popular Git hosting services because of their development infrastructure.
+This plugin fixes these issues by automatically spinning up local, ephemeral SSH proxy servers when a source dependency is identified in a build to act as a ‘man in the middle’ when Gradle attempts to retrieve the dependency. With this setup, the proxy can connect to the source repository using a [modern SSH implementation](https://mina.apache.org/sshd-project/), and provide a backward compatible SSH server to Gradle at the same time. In addition to modernizing the SSH implementation, the proxy server can inject additional authentication mechanisms, such as support for passwords, modern private key formats, key encryption, and SSH agent support, all of which Gradle source dependencies lack. This is important as it ensures that users are not simply locked out the most popular Git hosting services because of their development infrastructure.
 
 Unlike other plugins that may address this issue by introducing their own set of configuration structures and dependency resolution mechanisms, this plugin does not attempt to replace a core Gradle feature and therefore has full support from modern IDEs, which recognize source dependencies and treat them appropriately.
 
@@ -24,7 +24,7 @@ Unlike other plugins that may address this issue by introducing their own set of
 The only difference when compared to the base usage of source dependencies, aside from including the plugin, is the call to 'sshProxy' when specifying the dependency's URI. If the input URI does not use the SSH scheme or is otherwise invalid, no proxy redirection takes place and it will behave as if the plugin were not applied to the repository specification.
 
 ```
-import com.zynga.aquinney.sshcmdproxy.SSHCmdProxy.sshProxy;
+import io.github.aquinney0.sshcmdproxy.SSHCmdProxy.sshProxy;
 
 pluginManagement {
     repositories {
@@ -36,7 +36,7 @@ pluginManagement {
 plugins {
     // Apply the foojay-resolver plugin to allow automatic download of JDKs
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.4.0"
-    id("com.zynga.aquinney.ssh-cmd-proxy") version "1.0"
+    id("io.github.aquinney0.ssh-cmd-proxy") version "1.0"
 }
 
 rootProject.name = "project"
@@ -60,25 +60,25 @@ On systems that support UNIX domain sockets (Linux, MacOS, UNIX, Windows 10 buil
 ### Plugin Settings
 Plugin settings can be applied via [Gradle configuration](https://docs.gradle.org/current/userguide/build_environment.html) to customize some functionality. All entries are optional and need only be added if customization or additional authentication methods are required.
 
-* **com.zynga.aquinney.ssh-cmd-proxy.key-password-<ANY_VALUE>** - string value that indicates a password that should be used in attempting to decode an encrypted private key file. The plugin may use these values if other methods of authentication were not successful. There can be any number of these properties and the plugin will attempt each on encrypted private key files until one is successful.
-* **com.zynga.aquinney.ssh-cmd-proxy.password-\<USER\>@\<HOST\>[:\<PORT\>]** - string value that indicates the password to use when connecting as a particular user to an SSH Git service. If the default SSH port (22) is targeted, the port section can be omitted. This value may be used if other authentication mechanisms are not successful.
-* **com.zynga.aquinney.ssh-cmd-proxy.connect-timeout** - integer value that represents the maximum amount of time in milliseconds that the proxy server will wait in attempting to get a connection to a remote SSH Git service. Defaults to 3000.
-* **com.zynga.aquinney.ssh-cmd-proxy.auth-timeout** - integer value that represents the maximum amount ot time in milliseconds that the proxy server will wait in attempting to authenticate after connecting to a remote SSH Git service. Defaults to 3000.
-* **com.zynga.aquinney.ssh-cmd-proxy.channel-timeout** - integer value that represents the maximum amount ot time in milliseconds that the proxy server will wait in attempting to open a channel after authenticating with a remote SSH Git service. Defaults to 3000.
+* **io.github.aquinney0.ssh-cmd-proxy.key-password-<ANY_VALUE>** - string value that indicates a password that should be used in attempting to decode an encrypted private key file. The plugin may use these values if other methods of authentication were not successful. There can be any number of these properties and the plugin will attempt each on encrypted private key files until one is successful.
+* **io.github.aquinney0.ssh-cmd-proxy.password-\<USER\>@\<HOST\>[:\<PORT\>]** - string value that indicates the password to use when connecting as a particular user to an SSH Git service. If the default SSH port (22) is targeted, the port section can be omitted. This value may be used if other authentication mechanisms are not successful.
+* **io.github.aquinney0.ssh-cmd-proxy.connect-timeout** - integer value that represents the maximum amount of time in milliseconds that the proxy server will wait in attempting to get a connection to a remote SSH Git service. Defaults to 3000.
+* **io.github.aquinney0.ssh-cmd-proxy.auth-timeout** - integer value that represents the maximum amount of time in milliseconds that the proxy server will wait in attempting to authenticate after connecting to a remote SSH Git service. Defaults to 3000.
+* **io.github.aquinney0.ssh-cmd-proxy.channel-timeout** - integer value that represents the maximum amount of time in milliseconds that the proxy server will wait in attempting to open a channel after authenticating with a remote SSH Git service. Defaults to 3000.
 
 #### Example ~/.gradle/gradle.properties
 ```properties
 # The suffixes of these property names is not relevant - they are used for local private key decryption and are tried iteratively.
-com.zynga.aquinney.ssh-cmd-proxy.key-password-firstFileSecret=password
-com.zynga.aquinney.ssh-cmd-proxy.key-password-secondFileSecret=thisIsMyDecryptionKey
+io.github.aquinney0.ssh-cmd-proxy.key-password-firstFileSecret=password
+io.github.aquinney0.ssh-cmd-proxy.key-password-secondFileSecret=thisIsMyDecryptionKey
 
 # Passwords may only be applied to the user/host/port indicated in the property names.
-com.zynga.aquinney.ssh-cmd-proxy.password-aquinney0@github.com=andrewsPassword
-com.zynga.aquinney.ssh-cmd-proxy.password-aquinney@github-internal.zynga.com\:22=andrewsCorporatePassword
+io.github.aquinney0.ssh-cmd-proxy.password-aquinney0@github.com=andrewsPassword
+io.github.aquinney0.ssh-cmd-proxy.password-aquinney@github-internal.zynga.com\:22=andrewsCorporatePassword
 
-com.zynga.aquinney.ssh-cmd-proxy.connect-timeout=1000
-com.zynga.aquinney.ssh-cmd-proxy.auth-timeout=1000
-com.zynga.aquinney.ssh-cmd-proxy.channel-timeout=1000
+io.github.aquinney0.ssh-cmd-proxy.connect-timeout=1000
+io.github.aquinney0.ssh-cmd-proxy.auth-timeout=1000
+io.github.aquinney0.ssh-cmd-proxy.channel-timeout=1000
 ```
 
 ## Requirements
@@ -87,6 +87,21 @@ com.zynga.aquinney.ssh-cmd-proxy.channel-timeout=1000
 * Tested on Gradle 8.6
 
 The plugin is built for Java 17. Theoretically, it could be targeted at 16, but no earlier since it makes use of the Java 16 support for UNIX domain sockets. The new Java support is used instead of relying on MINA's method that requires the Tomcat Native libraries preinstalled.
+
+### Compatibility Notes
+
+* There appears to be a bug with [Gradle 8.7.0](https://github.com/gradle/gradle/releases/tag/v8.7.0) that is causing the JGit SSH implementation to be unable to connect to any SSH repository. This is unrelated to this plugin and is reproducible with any source dependency. Therefore, it is recommended that 8.7 be avoided if source dependencies are a required feature.
+
+```
+2024-04-12T12:59:02.542-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] Caused by: java.lang.NoSuchMethodError: 'java.lang.Object org.apache.sshd.client.future.ConnectFuture.verify()'
+2024-04-12T12:59:02.542-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.sshd.SshdSession.connect(SshdSession.java:189)
+2024-04-12T12:59:02.543-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.sshd.SshdSession.connect(SshdSession.java:142)
+2024-04-12T12:59:02.543-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.sshd.SshdSession.connect(SshdSession.java:99)
+2024-04-12T12:59:02.543-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.sshd.SshdSessionFactory.getSession(SshdSessionFactory.java:235)
+2024-04-12T12:59:02.543-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.sshd.SshdSessionFactory.getSession(SshdSessionFactory.java:1)
+2024-04-12T12:59:02.543-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.SshTransport.getSession(SshTransport.java:107)
+2024-04-12T12:59:02.543-0400 [ERROR] [org.gradle.internal.buildevents.BuildExceptionReporter] 	at org.eclipse.jgit.transport.TransportGitSsh$SshFetchConnection.<init>(TransportGitSsh.java:281)
+```
 
 ## Contributing
 

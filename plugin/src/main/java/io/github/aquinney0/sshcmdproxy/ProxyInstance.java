@@ -1,4 +1,4 @@
-package com.zynga.aquinney.sshcmdproxy;
+package io.github.aquinney0.sshcmdproxy;
 
 import java.io.*;
 import java.net.*;
@@ -60,6 +60,7 @@ class ProxyInstance implements Closeable {
     final SimpleGeneratorHostKeyProvider idProvider =
         new SimpleGeneratorHostKeyProvider() {
           {
+            // RSA seems like the best choice for supporting a legacy SSH client.
             setAlgorithm(KeyUtils.RSA_ALGORITHM);
           }
         };
@@ -255,7 +256,7 @@ class ProxyInstance implements Closeable {
             new FilePasswordProvider() {
               private final List<String> keyPasswords =
                   configurationSource
-                      .getProperties("com.zynga.aquinney.ssh-cmd-proxy.key-password-")
+                      .getProperties("io.github.aquinney0.ssh-cmd-proxy.key-password-")
                       .stream()
                       .toList();
 
@@ -284,7 +285,7 @@ class ProxyInstance implements Closeable {
                 .connect(gitService.toString())
                 .verify(
                     Duration.ofMillis(
-                        numberProperty("com.zynga.aquinney.ssh-cmd-proxy.connect-timeout", 3000)))
+                        numberProperty("io.github.aquinney0.ssh-cmd-proxy.connect-timeout", 3000)))
                 .getClientSession()) {
           logger.info("[{}] Connection successful.", gitService);
           if (!GenericUtils.isEmpty(sshClient.getString(SshAgent.SSH_AUTHSOCKET_ENV_NAME))) {
@@ -303,7 +304,7 @@ class ProxyInstance implements Closeable {
                 final InetSocketAddress socketAddress =
                     (InetSocketAddress) clientSession.getConnectAddress();
                 final String basePropertyName =
-                    "com.zynga.aquinney.ssh-cmd-proxy.password-"
+                    "io.github.aquinney0.ssh-cmd-proxy.password-"
                         + Optional.ofNullable(clientSession.getUsername())
                             .map(username -> username + "@")
                             .orElse("")
@@ -325,19 +326,22 @@ class ProxyInstance implements Closeable {
               .auth()
               .verify(
                   Duration.ofMillis(
-                      numberProperty("com.zynga.aquinney.ssh-cmd-proxy.auth-timeout", 3000)));
+                      numberProperty("io.github.aquinney0.ssh-cmd-proxy.auth-timeout", 3000)));
           logger.info("[{}] Authentication successful.", gitService);
+          logger.info("[{}] Opening channel...", gitService);
           try (final ClientChannel clientChannel = clientSession.createExecChannel(getCommand())) {
             clientChannel.setIn(getInputStream());
             clientChannel.setOut(getOutputStream());
             clientChannel.setErr(getErrorStream());
-            logger.info("[{}] Opening channel...", gitService);
             clientChannel
                 .open()
                 .verify(
                     Duration.ofMillis(
-                        numberProperty("com.zynga.aquinney.ssh-cmd-proxy.channel-timeout", 3000)));
-            logger.info("[{}] Channel opened successfully.", gitService);
+                        numberProperty("io.github.aquinney0.ssh-cmd-proxy.channel-timeout", 3000)));
+            logger.info(
+                "[{}] Channel opened successfully, processing command: {}",
+                gitService,
+                getCommand());
             clientChannel.waitFor(List.of(ClientChannelEvent.CLOSED), 0);
           }
         }
@@ -377,7 +381,7 @@ class ProxyInstance implements Closeable {
   public static void main(String[] args) throws Throwable {
     try (final ProxyInstance proxyInstance =
         new ProxyInstance(
-            URI.create("ssh://github.com"),
+            URI.create("ssh://github-internal.zynga.com"),
             7272,
             new ConfigurationSource() {
               @Override

@@ -29,7 +29,7 @@ dependencies {
     implementation("net.i2p.crypto:eddsa:0.3.0")
 }
 
-group = "com.zynga"
+group = "io.github.aquinney0"
 version = "1.0"
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -37,6 +37,11 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
+}
+
+signing {
+    useGpgCmd()
+    sign(configurations.runtimeElements.get())
 }
 
 publishing {
@@ -54,24 +59,26 @@ publishing {
     }
 }
 
+// Fixes the Gradle bug: https://discuss.gradle.org/t/implicit-dependency-among-tasks-but-the-tasks-do-not-exist/46127
+tasks.configureEach {
+    if (name == "publishPluginMavenPublicationToMavenLocal") {
+        mustRunAfter(tasks.findByName("signRuntimeElements"))
+    }
+}
+
 gradlePlugin {
     website = "https://github.com/zynga/ssh-cmd-proxy"
     vcsUrl = "https://github.com/zynga/ssh-cmd-proxy.git"
     plugins {
         create("SSHCmdProxy") {
-            id = "com.zynga.aquinney.ssh-cmd-proxy"
-            implementationClass = "com.zynga.aquinney.sshcmdproxy.SSHCmdProxy"
+            id = "io.github.aquinney0.ssh-cmd-proxy"
+            implementationClass = "io.github.aquinney0.sshcmdproxy.SSHCmdProxy"
             displayName = "SSH Command Proxy"
             description =
                 "A Gradle plugin that fixes some technical deficiencies and expands the capabilities of source dependencies."
             tags = listOf("git", "source", "dependencies", "dependency", "ssh", "auth", "authentication", "github")
         }
     }
-}
-
-signing {
-    useGpgCmd()
-    sign(configurations.runtimeElements.get())
 }
 
 spotless {

@@ -1,4 +1,4 @@
-package com.zynga.aquinney.sshcmdproxy;
+package io.github.aquinney0.sshcmdproxy;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
